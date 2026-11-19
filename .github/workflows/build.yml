@@ -36,6 +36,14 @@ jobs:
       - name: Install
         run: pip install -r src/pipeline/requirements.txt
 
+      # The 240 MB embedding model is cached on its own, saved once and only restored afterwards, so the
+      # small article and vector state below is the only thing uploaded on each run.
+      - name: Embedding model cache
+        uses: actions/cache@v4
+        with:
+          path: model-cache
+          key: model-minilm-l12-v2
+
       - name: Restore the 72 hour article pool
         uses: actions/cache/restore@v4
         with:
@@ -45,6 +53,8 @@ jobs:
 
       - name: Build
         working-directory: src
+        env:
+          THREAD_MODEL_DIR: ${{ github.workspace }}/model-cache
         run: |
           python pipeline/process.py
           python pipeline/render.py
