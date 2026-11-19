@@ -14,6 +14,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      actions: write
+      contents: read
     steps:
       - name: Fetch the private source
         env:
@@ -70,3 +73,13 @@ jobs:
           git commit -q -m "Edition $(date -u +'%Y-%m-%d %H:%M') UTC"
           git push -q --force git@github.com:backendissues/news-built.git main
           rm -f ~/built_key
+
+      # GitHub's scheduler can start late or skip runs, so a manual or chained run queues the next one itself.
+      # Scheduled runs do not chain, so there is only ever one chain; the schedule restarts it if it breaks.
+      - name: Queue the next edition
+        if: always() && github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sleep 240
+          gh workflow run build.yml --repo "$GITHUB_REPOSITORY"
